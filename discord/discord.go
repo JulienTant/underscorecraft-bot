@@ -7,12 +7,11 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type client struct {
-	s         *discordgo.Session
-	channelID string
+type Client struct {
+	s *discordgo.Session
 }
 
-func NewClient(token, channelID string) (*client, error) {
+func NewClient(token string) (*Client, error) {
 	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, fmt.Errorf("creating discordgo: %w", err)
@@ -25,19 +24,22 @@ func NewClient(token, channelID string) (*client, error) {
 		return nil, fmt.Errorf("opening discordgo: %w", err)
 	}
 
-	return &client{
-		s:         dg,
-		channelID: channelID,
+	return &Client{
+		s: dg,
 	}, nil
 }
 
-func (c *client) OnNewMessage(fn func(string, string)) {
+func (c *Client) Session() *discordgo.Session {
+	return c.s
+}
+
+func (c *Client) OnNewMessage(chatChannelID string, fn func(string, string)) {
 	c.s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
 		}
 
-		if m.ChannelID != c.channelID {
+		if chatChannelID != "all" && m.ChannelID != chatChannelID {
 			return
 		}
 
@@ -50,18 +52,18 @@ func (c *client) OnNewMessage(fn func(string, string)) {
 	})
 }
 
-func (c *client) Close() error {
+func (c *Client) Close() error {
 	return c.s.Close()
 }
 
-func (c *client) Send(msg string) (*discordgo.Message, error) {
-	return c.Sendf(msg)
+func (c *Client) Send(chatChannelID string, msg string) (*discordgo.Message, error) {
+	return c.Sendf(chatChannelID, msg)
 }
 
-func (c *client) Sendf(msg string, args ...interface{}) (*discordgo.Message, error) {
-	log.Printf(msg+" to %s", append(args, c.channelID)...)
+func (c *Client) Sendf(chatChannelID string, msg string, args ...interface{}) (*discordgo.Message, error) {
+	log.Printf(msg+" to %s", append(args, chatChannelID)...)
 
-	dmsg, err := c.s.ChannelMessageSend(c.channelID, fmt.Sprintf(msg, args...))
+	dmsg, err := c.s.ChannelMessageSend(chatChannelID, fmt.Sprintf(msg, args...))
 	if err != nil {
 		return dmsg, fmt.Errorf("send msg: %w", err)
 	}
@@ -69,6 +71,6 @@ func (c *client) Sendf(msg string, args ...interface{}) (*discordgo.Message, err
 	return dmsg, nil
 }
 
-func (c *client) React(msg *discordgo.Message, reaction string) error {
-	return c.s.MessageReactionAdd(c.channelID, msg.ID, reaction)
+func (c *Client) React(chatChannelID string, msg *discordgo.Message, reaction string) error {
+	return c.s.MessageReactionAdd(chatChannelID, msg.ID, reaction)
 }

@@ -1,30 +1,27 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
+	"docker-minecraft-to-discord/admin"
 	"docker-minecraft-to-discord/discord"
+	"docker-minecraft-to-discord/docker"
 	"docker-minecraft-to-discord/loganalyzer"
-	"errors"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"time"
 
-	"github.com/docker/docker/api/types/filters"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	rootCmd.Flags().String("container-label", "com.mc2discord.is_server", "minecraft container name")
-	rootCmd.Flags().String("channel-id", "", "discord channel id")
+	rootCmd.Flags().String("chat-channel-id", "", "discord chat channel id")
+	rootCmd.Flags().String("admin-channel-id", "", "discord admin channel id")
 	rootCmd.Flags().String("bot-token", "", "discord bot token")
 
-	_ = rootCmd.MarkFlagRequired("channel-id")
+	_ = rootCmd.MarkFlagRequired("admin-channel-id")
+	_ = rootCmd.MarkFlagRequired("chat-channel-id")
 	_ = rootCmd.MarkFlagRequired("bot-token")
 }
 
@@ -52,9 +49,14 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatalf("get bot-token: %s", err)
 	}
 
-	channelID, err := cmd.Flags().GetString("channel-id")
+	chatChannelID, err := cmd.Flags().GetString("chat-channel-id")
 	if err != nil {
-		log.Fatalf("get channel-id: %s", err)
+		log.Fatalf("get chat-channel-id: %s", err)
+	}
+
+	adminChannelID, err := cmd.Flags().GetString("admin-channel-id")
+	if err != nil {
+		log.Fatalf("get admin-channel-id: %s", err)
 	}
 
 	containerLabel, err := cmd.Flags().GetString("container-label")
@@ -62,7 +64,7 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatalf("get container-label: %s", err)
 	}
 
-	discordClient, err := discord.NewClient(botToken, channelID)
+	discordClient, err := discord.NewClient(botToken)
 	if err != nil {
 		log.Fatalf("discord.NewClient: %s", err)
 	}
@@ -74,120 +76,82 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		inactivityDuration = time.Hour
 	}
 
-	dockerClient, err := client.NewEnvClient()
+	dockerClient, err := docker.NewClient()
 	if err != nil {
 		log.Fatalf("NewDockerClient: %s", err)
 	}
 
 	log.Println("looking for minecraft container")
-	container, err := getContainer(ctx, dockerClient, containerLabel)
+	container, err := dockerClient.GetContainerWithLabel(ctx, containerLabel)
 	if err != nil {
-		log.Fatalf("getContainer: %s", err)
+		log.Fatalf("get container", err)
 	}
 	log.Printf("found %s", container.ID)
 
-	attachedContainer, err := dockerClient.ContainerAttach(ctx, container.ID, types.ContainerAttachOptions{
-		Stream: true,
-		Stdin:  true,
-		Stdout: true,
-		Stderr: true,
-	})
+	attached, err := dockerClient.Attach(ctx, container)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	discordClient.OnNewMessage(func(username, msg string) {
-		_, _ = attachedContainer.Conn.Write([]byte{'\n'})
-		m := fmt.Sprintf(`tellraw @a [{"text":"<"},{"text":"[d]","bold":true,"color":"dark_purple","hoverEvent":{"action":"show_text","value":["",{"text":"Message From Discord"}]}},{"text":"%s> %s"}]`, username, msg)
-		_, _ = attachedContainer.Conn.Write([]byte(m))
-		_, _ = attachedContainer.Conn.Write([]byte{'\n'})
+	adminModule := admin.New(discordClient, adminChannelID, attached)
+
+	discordClient.OnNewMessage(chatChannelID, func(username, msg string) {
+		attached.SendString(fmt.Sprintf(`tellraw @a [{"text":"<"},{"text":"[d]","bold":true,"color":"dark_purple","hoverEvent":{"action":"show_text","value":["",{"text":"Message From Discord"}]}},{"text":"%s> %s"}]`, username, msg))
+		if err != nil {
+			log.Printf("[ERR] send string: %s", err)
+		}
 	})
 
-	r := bufio.NewReader(attachedContainer.Reader)
-	lastThing := time.Now()
-	for {
-		_ = attachedContainer.Conn.SetDeadline(time.Now().Add(5 * time.Second))
+	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
 
-		if lastThing.Add(inactivityDuration).After(time.Now()) {
-			log.Fatalf("No activity for %s, restart", inactivityDuration)
-		}
-
-		s, err := r.ReadString('\n')
-		if len(s) == 0 || err != nil && err != io.EOF {
-			ccontainer, _ := dockerClient.ContainerInspect(ctx, container.ID)
-			cstartedAt, _ := time.Parse(time.RFC3339, ccontainer.State.StartedAt)
-			if ccontainer.State.Running == false || cstartedAt.After(startedAt) {
-				log.Fatal("No message & the server has been restarted, i'll restart too...")
-			}
-			continue
-		}
+	attached.OnNewMessage("discord <> mc chat", func(s string) error {
 		res := loganalyzer.Analyze(s)
 		switch pl := res.(type) {
 		case loganalyzer.NewMessagePayload:
-			_, err := discordClient.Sendf("%s » %s", pl.Username, pl.Message)
+			_, err := discordClient.Sendf(chatChannelID, "%s » %s", pl.Username, pl.Message)
 			if err != nil {
 				log.Printf("[err] send NewMessagePayload: %s", err)
 			}
 		case loganalyzer.JoinGamePayload:
-			_, err := discordClient.Sendf(":arrow_right: %s joined", pl.Username)
+			_, err := discordClient.Sendf(chatChannelID, ":arrow_right: %s joined", pl.Username)
 			if err != nil {
 				log.Printf("[err] send JoinGamePayload: %s", err)
 			}
 		case loganalyzer.LeftGamePayload:
-			_, err := discordClient.Sendf(":arrow_left: %s left", pl.Username)
+			_, err := discordClient.Sendf(chatChannelID, ":arrow_left: %s left", pl.Username)
 			if err != nil {
 				log.Printf("[err] send LeftGamePayload: %s", err)
 			}
 		case loganalyzer.AdvancementPayload:
-			_, err := discordClient.Sendf(":muscle: %s has made the advancement %s", pl.Username, pl.Advancement)
+			_, err := discordClient.Sendf(chatChannelID, ":muscle: %s has made the advancement %s", pl.Username, pl.Advancement)
 			if err != nil {
 				log.Printf("[err] send AdvancementPayload: %s", err)
 			}
 		case loganalyzer.ChallengePayload:
-			_, err := discordClient.Sendf(":muscle: %s has completed the challenge %s", pl.Username, pl.Advancement)
+			_, err := discordClient.Sendf(chatChannelID, ":muscle: %s has completed the challenge %s", pl.Username, pl.Advancement)
 			if err != nil {
 				log.Printf("[err] send ChallengePayload: %s", err)
 			}
 		case loganalyzer.MePayload:
-			_, err := discordClient.Sendf(`*\* %s %s*`, pl.Username, pl.Action)
+			_, err := discordClient.Sendf(chatChannelID, `*\* %s %s*`, pl.Username, pl.Action)
 			if err != nil {
 				log.Printf("[err] send MePayload: %s", err)
 			}
 		case loganalyzer.DeathPayload:
-			m, err := discordClient.Sendf(":skull: %s %s", pl.Username, pl.Cause)
+			m, err := discordClient.Sendf(chatChannelID, ":skull: %s %s", pl.Username, pl.Cause)
 			if err != nil {
 				log.Printf("[err] send DeathPayload: %s", err)
 			} else {
-				err = discordClient.React(m, `🇫`)
+				err = discordClient.React(chatChannelID, m, `🇫`)
 				if err != nil {
 					log.Printf("[err] add reaction to DeathPayload: %s", err)
 				}
 			}
 		}
-		lastThing = time.Now()
-	}
-
-}
-
-func getContainer(ctx context.Context, docker *client.Client, containerLabel string) (*types.Container, error) {
-	f := filters.NewArgs()
-	f.Add("label", containerLabel)
-	containers, err := docker.ContainerList(ctx, types.ContainerListOptions{
-		All:     true,
-		Filters: f,
+		return nil
 	})
 
-	if err != nil {
-		return nil, fmt.Errorf("containerList: %w", err)
-	}
-
-	if len(containers) != 1 {
-		return nil, errors.New("unable to find minecraft container")
-	}
-
-	if containers[0].State != "running" {
-		return nil, errors.New("container is not running")
-	}
-
-	return &containers[0], nil
+	log.Fatalf("listen stopped: %s", attached.Listen(ctx, inactivityDuration, func() bool {
+		return dockerClient.IsContainerAlive(ctx, container, startedAt)
+	}))
 }
