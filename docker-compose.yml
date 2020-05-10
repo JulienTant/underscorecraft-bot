@@ -1,0 +1,9 @@
+version: '3.4'
+
+services:
+  dm2d:
+    build: .
+    restart: always
+    command: "--channel-id=${CHANNEL_ID} --bot-token=${BOT_TOKEN}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
