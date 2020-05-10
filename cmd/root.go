@@ -67,6 +67,13 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatalf("discord.NewClient: %s", err)
 	}
 
+	inactivityDurationStr := os.Getenv("INACTIVITY_DURATION")
+	inactivityDuration, err := time.ParseDuration(inactivityDurationStr)
+	if inactivityDuration == time.Duration(0) || err != nil {
+		log.Println("Setting default duration to one hour")
+		inactivityDuration = time.Hour
+	}
+
 	dockerClient, err := client.NewEnvClient()
 	if err != nil {
 		log.Fatalf("NewDockerClient: %s", err)
@@ -97,17 +104,22 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 	})
 
 	r := bufio.NewReader(attachedContainer.Reader)
-
+	lastThing := time.Now()
 	for {
 		_ = attachedContainer.Conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+		if lastThing.Add(inactivityDuration).After(time.Now()) {
+			log.Fatalf("No activity for %s, restart", inactivityDuration)
+		}
 
 		s, err := r.ReadString('\n')
 		if len(s) == 0 || err != nil && err != io.EOF {
 			ccontainer, _ := dockerClient.ContainerInspect(ctx, container.ID)
 			cstartedAt, _ := time.Parse(time.RFC3339, ccontainer.State.StartedAt)
 			if ccontainer.State.Running == false || cstartedAt.After(startedAt) {
-				log.Fatal("something is wierd, rebooting")
+				log.Fatal("No message & the server has been restarted, i'll restart too...")
 			}
+			continue
 		}
 		res := loganalyzer.Analyze(s)
 		switch pl := res.(type) {
@@ -152,6 +164,7 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 				}
 			}
 		}
+		lastThing = time.Now()
 	}
 
 }
