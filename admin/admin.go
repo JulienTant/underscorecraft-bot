@@ -47,6 +47,16 @@ func New(discord *discord.Client, adminChannelID string, attached *docker.Attach
 			help:   ": reboot the server...!!!!",
 			method: m.rebootServer,
 		},
+		{
+			prefix: "!whitelist-add",
+			help:   "<username>: adds a user to the whitelist",
+			method: m.addUserToWhitelist,
+		},
+		{
+			prefix: "!whitelist-remove",
+			help:   "<username>: removes a user to the whitelist",
+			method: m.removeUserFromWhitelist,
+		},
 	}
 
 	return m
@@ -163,4 +173,16 @@ func (m *module) rebootServer(s string) {
 		time.Sleep(time.Second)
 	}
 	m.discord.Send(m.adminChannel, "Gave up")
+}
+
+func (m *module) addUserToWhitelist(msg string) {
+	mcUsername := strings.TrimSpace(strings.TrimPrefix(msg, "!whitelist-add"))
+	m.attached.SendString("whitelist add " + mcUsername)
+	m.discord.Send(m.adminChannel, "Added to whitelist")
+}
+
+func (m *module) removeUserFromWhitelist(msg string) {
+	mcUsername := strings.TrimSpace(strings.TrimPrefix(msg, "!whitelist-remove"))
+	m.attached.SendString("whitelist remove " + mcUsername)
+	m.discord.Send(m.adminChannel, "Removed to whitelist")
 }
