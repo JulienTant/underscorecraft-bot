@@ -93,7 +93,7 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatal(err)
 	}
 
-	adminModule := admin.New(discordClient, adminChannelID, attached)
+	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container, attached)
 
 	discordClient.OnNewMessage(chatChannelID, func(username, msg string) {
 		attached.SendString(fmt.Sprintf(`tellraw @a [{"text":"<"},{"text":"[d]","bold":true,"color":"dark_purple","hoverEvent":{"action":"show_text","value":["",{"text":"Message From Discord"}]}},{"text":"%s> %s"}]`, username, msg))

@@ -1,18 +1,23 @@
 package admin
 
 import (
+	"context"
 	"docker-minecraft-to-discord/discord"
 	"docker-minecraft-to-discord/docker"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/api/types"
 )
 
 type module struct {
 	discord      *discord.Client
 	adminChannel string
 
-	attached *docker.Attached
+	dockerClient *docker.Client
+	container    *docker.Container
+	attached     *docker.Attached
 }
 
 type method struct {
@@ -23,11 +28,13 @@ type method struct {
 
 var methods []method
 
-func New(discord *discord.Client, adminChannelID string, attached *docker.Attached) *module {
+func New(discord *discord.Client, adminChannelID string, dockerClient *docker.Client, container *docker.Container, attached *docker.Attached) *module {
 
 	m := &module{
 		discord:      discord,
 		adminChannel: adminChannelID,
+		dockerClient: dockerClient,
+		container:    container,
 		attached:     attached,
 	}
 
@@ -50,12 +57,17 @@ func New(discord *discord.Client, adminChannelID string, attached *docker.Attach
 		{
 			prefix: "!whitelist-add",
 			help:   "<username>: adds a user to the whitelist",
-			method: m.addUserToWhitelist,
+			method: m.whitelistAdd,
 		},
 		{
 			prefix: "!whitelist-remove",
 			help:   "<username>: removes a user to the whitelist",
-			method: m.removeUserFromWhitelist,
+			method: m.whitelistRemove,
+		},
+		{
+			prefix: "!whitelist-list",
+			help:   ": list whitelisted players",
+			method: m.whitelistList,
 		},
 	}
 
@@ -175,14 +187,53 @@ func (m *module) rebootServer(s string) {
 	m.discord.Send(m.adminChannel, "Gave up")
 }
 
-func (m *module) addUserToWhitelist(msg string) {
+func (m *module) whitelistAdd(msg string) {
 	mcUsername := strings.TrimSpace(strings.TrimPrefix(msg, "!whitelist-add"))
 	m.attached.SendString("whitelist add " + mcUsername)
 	m.discord.Send(m.adminChannel, "Added to whitelist")
 }
 
-func (m *module) removeUserFromWhitelist(msg string) {
+func (m *module) whitelistRemove(msg string) {
 	mcUsername := strings.TrimSpace(strings.TrimPrefix(msg, "!whitelist-remove"))
 	m.attached.SendString("whitelist remove " + mcUsername)
-	m.discord.Send(m.adminChannel, "Removed to whitelist")
+	m.discord.Send(m.adminChannel, "Removed from whitelist")
+}
+
+func (m *module) whitelistList(msg string) {
+	id, err := m.dockerClient.InnerClient().ContainerExecCreate(context.Background(), m.container.ID, types.ExecConfig{
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          []string{"rcon-cli", "whitelist", "list"},
+	})
+	if err != nil {
+		log.Println("[err] whitelist ContainerExecCreate", err)
+	}
+
+	a, err := m.dockerClient.InnerClient().ContainerExecAttach(context.Background(), id.ID, types.ExecConfig{
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          []string{"rcon-cli", "whitelist", "list"},
+	})
+	if err != nil {
+		log.Println("[err] whitelist ContainerExecAttach", err)
+	}
+
+	str := ""
+	for {
+		_ = a.Conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+		s, err := a.Reader.ReadString('\n')
+		if err != nil {
+			idx := strings.Index(str, "There")
+			if idx == -1 {
+				log.Println("[err] whitelist idx -1", err)
+				return
+			}
+			m.discord.Send(m.adminChannel, str[idx:])
+			a.Close()
+			return
+		}
+
+		str += string(s)
+	}
 }

@@ -1,7 +1,6 @@
 package docker
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -13,11 +12,11 @@ import (
 	dclient "github.com/docker/docker/client"
 )
 
-type client struct {
+type Client struct {
 	d *dclient.Client
 }
 
-type container struct {
+type Container struct {
 	*types.Container
 }
 
@@ -51,7 +50,6 @@ func (a *Attached) OnNewMessage(name string, f func(s string) error) {
 }
 
 func (a *Attached) Listen(ctx context.Context, inactivityDuration time.Duration, isAliveFn func() bool) error {
-	r := bufio.NewReader(a.Reader)
 	lastThing := time.Now()
 	for {
 		select {
@@ -64,7 +62,7 @@ func (a *Attached) Listen(ctx context.Context, inactivityDuration time.Duration,
 				return fmt.Errorf("no activity for %s, restart", inactivityDuration)
 			}
 
-			s, err := r.ReadString('\n')
+			s, err := a.Reader.ReadString('\n')
 			if len(s) == 0 || err != nil && err != io.EOF {
 				if !isAliveFn() {
 					return errors.New("container is not alive..")
@@ -84,18 +82,22 @@ func (a *Attached) Listen(ctx context.Context, inactivityDuration time.Duration,
 	}
 }
 
-func NewClient() (*client, error) {
+func NewClient() (*Client, error) {
 	dockerClient, err := dclient.NewEnvClient()
 	if err != nil {
 		return nil, fmt.Errorf("creating NewEnvClient: %w", err)
 	}
 
-	return &client{
+	return &Client{
 		d: dockerClient,
 	}, nil
 }
 
-func (c *client) GetContainerWithLabel(ctx context.Context, label string) (*container, error) {
+func (c *Client) InnerClient() *dclient.Client {
+	return c.d
+}
+
+func (c *Client) GetContainerWithLabel(ctx context.Context, label string) (*Container, error) {
 	f := filters.NewArgs()
 	f.Add("label", label)
 	containers, err := c.d.ContainerList(ctx, types.ContainerListOptions{
@@ -115,10 +117,10 @@ func (c *client) GetContainerWithLabel(ctx context.Context, label string) (*cont
 		return nil, errors.New("container is not running")
 	}
 
-	return &container{&containers[0]}, nil
+	return &Container{&containers[0]}, nil
 }
 
-func (c *client) Attach(ctx context.Context, container *container) (*Attached, error) {
+func (c *Client) Attach(ctx context.Context, container *Container) (*Attached, error) {
 	attachedContainer, err := c.d.ContainerAttach(ctx, container.ID, types.ContainerAttachOptions{
 		Stream: true,
 		Stdin:  true,
@@ -135,7 +137,7 @@ func (c *client) Attach(ctx context.Context, container *container) (*Attached, e
 	}, nil
 }
 
-func (c *client) IsContainerAlive(ctx context.Context, container *container, programStart time.Time) bool {
+func (c *Client) IsContainerAlive(ctx context.Context, container *Container, programStart time.Time) bool {
 	cir, _ := c.d.ContainerInspect(ctx, container.ID)
 	cstart, _ := time.Parse(time.RFC3339, cir.State.StartedAt)
 	if cir.State.Running == false || cstart.After(programStart) {
