@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/docker/docker/api/types"
 )
@@ -68,6 +69,11 @@ func New(discord *discord.Client, adminChannelID string, dockerClient *docker.Cl
 			prefix: "!whitelist-list",
 			help:   ": list whitelisted players",
 			method: m.whitelistList,
+		},
+		{
+			prefix: "!rcon",
+			help:   ": start an rcon command. USE WITH CAUTION!",
+			method: m.rcon,
 		},
 	}
 
@@ -199,11 +205,48 @@ func (m *module) whitelistRemove(msg string) {
 	m.discord.Send(m.adminChannel, "Removed from whitelist")
 }
 
-func (m *module) whitelistList(msg string) {
+func (m *module) whitelistList(_ string) {
+	m.actualRcon("whitelist list")
+}
+
+func (m *module) rcon(msg string) {
+	command := strings.TrimSpace(strings.TrimPrefix(msg, "!rcon"))
+
+	dmsg, _ := m.discord.Sendf(m.adminChannel, ":scream: wow you're using rcon :scream: are you sure you want to execute %s", command)
+	m.discord.React(m.adminChannel, dmsg, "✅")
+	m.discord.React(m.adminChannel, dmsg, "❌")
+
+	for cnt := 0; cnt < 15; cnt++ {
+		dmsg, err := m.discord.Session().ChannelMessage(m.adminChannel, dmsg.ID)
+		if err != nil {
+			log.Printf("[err] at read channel msg: %s", err)
+			break
+		}
+
+		for i := range dmsg.Reactions {
+			if dmsg.Reactions[i].Count >= 2 {
+				switch dmsg.Reactions[i].Emoji.Name {
+				case "✅":
+					m.actualRcon(command)
+					return
+				case "❌":
+					_, err = m.discord.Send(m.adminChannel, "Ok, i wont")
+					return
+				}
+			}
+		}
+		time.Sleep(time.Second)
+	}
+	m.discord.Send(m.adminChannel, "Gave up")
+
+}
+
+func (m *module) actualRcon(command string) {
+	cmd := append([]string{"rcon-cli"}, strings.Split(command, " ")...)
 	id, err := m.dockerClient.InnerClient().ContainerExecCreate(context.Background(), m.container.ID, types.ExecConfig{
 		AttachStderr: true,
 		AttachStdout: true,
-		Cmd:          []string{"rcon-cli", "whitelist", "list"},
+		Cmd:          cmd,
 	})
 	if err != nil {
 		log.Println("[err] whitelist ContainerExecCreate", err)
@@ -212,7 +255,7 @@ func (m *module) whitelistList(msg string) {
 	a, err := m.dockerClient.InnerClient().ContainerExecAttach(context.Background(), id.ID, types.ExecConfig{
 		AttachStderr: true,
 		AttachStdout: true,
-		Cmd:          []string{"rcon-cli", "whitelist", "list"},
+		Cmd:          cmd,
 	})
 	if err != nil {
 		log.Println("[err] whitelist ContainerExecAttach", err)
@@ -224,16 +267,13 @@ func (m *module) whitelistList(msg string) {
 
 		s, err := a.Reader.ReadString('\n')
 		if err != nil {
-			idx := strings.Index(str, "There")
-			if idx == -1 {
-				log.Println("[err] whitelist idx -1", err)
-				return
-			}
-			m.discord.Send(m.adminChannel, str[idx:])
+			m.discord.Send(m.adminChannel, str)
 			a.Close()
 			return
 		}
 
-		str += string(s)
+		str += strings.TrimFunc(s, func(r rune) bool {
+			return !unicode.IsGraphic(r)
+		})
 	}
 }
