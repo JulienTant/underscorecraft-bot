@@ -3,10 +3,9 @@ package cmd
 import (
 	"context"
 	"docker-minecraft-to-discord/admin"
+	"docker-minecraft-to-discord/chat"
 	"docker-minecraft-to-discord/discord"
 	"docker-minecraft-to-discord/docker"
-	"docker-minecraft-to-discord/loganalyzer"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -94,68 +93,13 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatal(err)
 	}
 
+	chatModule := chat.New(discordClient, adminChannelID, attached)
 	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container, attached)
 
-	discordClient.OnNewMessage(chatChannelID, func(username, msg string) {
-		b, _ := json.Marshal(username)
-		secureUsername := string(b)
-		b, _ = json.Marshal(msg)
-		secureMsg := string(b)
-
-		attached.SendString(fmt.Sprintf(`tellraw @a [{"text":"<"},{"text":"[d]","bold":true,"color":"dark_purple","hoverEvent":{"action":"show_text","value":["",{"text":"Message From Discord"}]}},{"text":"%s> %s"}]`, secureUsername, secureMsg))
-		if err != nil {
-			log.Printf("[ERR] send string: %s", err)
-		}
-	})
-
+	discordClient.OnNewMessage(chatChannelID, chatModule.OnNewDiscordMessage)
 	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
 
-	attached.OnNewMessage("discord <> mc chat", func(s string) error {
-		res := loganalyzer.Analyze(s)
-		switch pl := res.(type) {
-		case loganalyzer.NewMessagePayload:
-			_, err := discordClient.Sendf(chatChannelID, "%s » %s", pl.Username, pl.Message)
-			if err != nil {
-				log.Printf("[err] send NewMessagePayload: %s", err)
-			}
-		case loganalyzer.JoinGamePayload:
-			_, err := discordClient.Sendf(chatChannelID, ":arrow_right: %s joined", pl.Username)
-			if err != nil {
-				log.Printf("[err] send JoinGamePayload: %s", err)
-			}
-		case loganalyzer.LeftGamePayload:
-			_, err := discordClient.Sendf(chatChannelID, ":arrow_left: %s left", pl.Username)
-			if err != nil {
-				log.Printf("[err] send LeftGamePayload: %s", err)
-			}
-		case loganalyzer.AdvancementPayload:
-			_, err := discordClient.Sendf(chatChannelID, ":muscle: %s has made the advancement %s", pl.Username, pl.Advancement)
-			if err != nil {
-				log.Printf("[err] send AdvancementPayload: %s", err)
-			}
-		case loganalyzer.ChallengePayload:
-			_, err := discordClient.Sendf(chatChannelID, ":muscle: %s has completed the challenge %s", pl.Username, pl.Advancement)
-			if err != nil {
-				log.Printf("[err] send ChallengePayload: %s", err)
-			}
-		case loganalyzer.MePayload:
-			_, err := discordClient.Sendf(chatChannelID, `*\* %s %s*`, pl.Username, pl.Action)
-			if err != nil {
-				log.Printf("[err] send MePayload: %s", err)
-			}
-		case loganalyzer.DeathPayload:
-			m, err := discordClient.Sendf(chatChannelID, ":skull: %s %s", pl.Username, pl.Cause)
-			if err != nil {
-				log.Printf("[err] send DeathPayload: %s", err)
-			} else {
-				err = discordClient.React(chatChannelID, m, `🇫`)
-				if err != nil {
-					log.Printf("[err] add reaction to DeathPayload: %s", err)
-				}
-			}
-		}
-		return nil
-	})
+	attached.OnNewMessage("discord <> mc chat", chatModule.OnNewAttachedMessage)
 
 	log.Fatalf("listen stopped: %s", attached.Listen(ctx, inactivityDuration, func() bool {
 		return dockerClient.IsContainerAlive(ctx, container, startedAt)
