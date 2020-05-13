@@ -19,7 +19,6 @@ type module struct {
 
 	dockerClient *docker.Client
 	container    *docker.Container
-	attached     *docker.Attached
 }
 
 type action struct {
@@ -30,14 +29,13 @@ type action struct {
 
 var actions []action
 
-func New(discord *discord.Client, adminChannelID string, dockerClient *docker.Client, container *docker.Container, attached *docker.Attached) *module {
+func New(discord *discord.Client, adminChannelID string, dockerClient *docker.Client, container *docker.Container) *module {
 
 	m := &module{
 		discord:      discord,
 		adminChannel: adminChannelID,
 		dockerClient: dockerClient,
 		container:    container,
-		attached:     attached,
 	}
 
 	actions = []action{
@@ -129,19 +127,16 @@ func (m *module) help(_ string) {
 
 func (m *module) rebootServer(_ string) {
 	m.confirmGeneric("Are you sure you want to do that %s (you have 15s to react)?", func() {
-		m.attached.SendString("stop")
-		m.discord.Send(m.adminChannel, "Ok, stop command sent")
+		m.actualRcon("stop")
 	})
 }
 
 func (m *module) whitelistAdd(mcUsername string) {
-	m.attached.SendString("whitelist add " + mcUsername)
-	m.discord.Send(m.adminChannel, "Added to whitelist")
+	m.actualRcon("whitelist add " + mcUsername)
 }
 
 func (m *module) whitelistRemove(mcUsername string) {
-	m.attached.SendString("whitelist remove " + mcUsername)
-	m.discord.Send(m.adminChannel, "Removed from whitelist")
+	m.actualRcon("whitelist remove " + mcUsername)
 }
 
 func (m *module) whitelistList(_ string) {
