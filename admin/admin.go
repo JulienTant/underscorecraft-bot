@@ -8,7 +8,6 @@ import (
 	"log"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/docker/docker/api/types"
 )
@@ -169,19 +168,18 @@ func (m *module) actualRcon(command string) {
 		log.Println("[err] whitelist ContainerExecAttach", err)
 	}
 
-	str := ""
+	var bs []byte
 	for {
 		_ = a.Conn.SetDeadline(time.Now().Add(5 * time.Second))
 
-		s, err := a.Reader.ReadString('\n')
+		b, err := a.Reader.ReadBytes('\n')
 		if err != nil {
-			m.discord.Send(m.adminChannel, str)
+			sb := strings.Builder{}
+			sb.Write(bs[8 : len(bs)-1])
+			m.discord.Send(m.adminChannel, sb.String())
 			a.Close()
 			return
 		}
-
-		str += strings.TrimFunc(s, func(r rune) bool {
-			return !unicode.IsGraphic(r)
-		})
+		bs = append(bs, b...)
 	}
 }
