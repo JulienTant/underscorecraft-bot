@@ -6,6 +6,7 @@ import (
 	"docker-minecraft-to-discord/discord"
 	"docker-minecraft-to-discord/docker"
 	"docker-minecraft-to-discord/loganalyzer"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -96,7 +97,12 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container, attached)
 
 	discordClient.OnNewMessage(chatChannelID, func(username, msg string) {
-		attached.SendString(fmt.Sprintf(`tellraw @a [{"text":"<"},{"text":"[d]","bold":true,"color":"dark_purple","hoverEvent":{"action":"show_text","value":["",{"text":"Message From Discord"}]}},{"text":"%s> %s"}]`, username, msg))
+		b, _ := json.Marshal(username)
+		secureUsername := string(b)
+		b, _ = json.Marshal(msg)
+		secureMsg := string(b)
+
+		attached.SendString(fmt.Sprintf(`tellraw @a [{"text":"<"},{"text":"[d]","bold":true,"color":"dark_purple","hoverEvent":{"action":"show_text","value":["",{"text":"Message From Discord"}]}},{"text":"%s> %s"}]`, secureUsername, secureMsg))
 		if err != nil {
 			log.Printf("[ERR] send string: %s", err)
 		}
