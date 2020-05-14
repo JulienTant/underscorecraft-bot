@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"bytes"
 	"docker-minecraft-to-discord/discord"
 	"docker-minecraft-to-discord/docker"
 	"docker-minecraft-to-discord/loganalyzer"
@@ -27,9 +28,9 @@ func New(discord *discord.Client, channel string, attached *docker.Attached) *mo
 
 func (m *module) OnNewDiscordMessage(username, msg string) {
 	b, _ := json.Marshal(username)
-	secureUsername := string(b)
+	secureUsername := string(bytes.Trim(b, `"`))
 	b, _ = json.Marshal(msg)
-	secureMsg := string(b)
+	secureMsg := string(bytes.Trim(b, `"`))
 
 	err := m.attached.SendString(fmt.Sprintf(`tellraw @a [{"text":"<"},{"text":"[d]","bold":true,"color":"dark_purple","hoverEvent":{"action":"show_text","value":["",{"text":"Message From Discord"}]}},{"text":"%s> %s"}]`, secureUsername, secureMsg))
 	if err != nil {
