@@ -93,13 +93,12 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatal(err)
 	}
 
-	chatModule := chat.New(discordClient, adminChannelID, attached)
-	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container)
-
+	chatModule := chat.New(discordClient, chatChannelID, attached)
 	discordClient.OnNewMessage(chatChannelID, chatModule.OnNewDiscordMessage)
-	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
-
 	attached.OnNewMessage("discord <> mc chat", chatModule.OnNewAttachedMessage)
+
+	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container)
+	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
 
 	log.Fatalf("listen stopped: %s", attached.Listen(ctx, inactivityDuration, func() bool {
 		return dockerClient.IsContainerAlive(ctx, container, startedAt)
