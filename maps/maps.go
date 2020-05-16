@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-const MaxMarkersPerPlayer = 2
+const MaxMarkersPerPlayer = 3
 
 type module struct {
 	discord      *discord.Client
@@ -45,7 +45,7 @@ func New(discord *discord.Client, channelID string, jsonFilePath string) *module
 		},
 		{
 			prefix: "!marker-add",
-			help:   "<X Y Z> <name>: add a marker called <name> on given coordinates ",
+			help:   "<overworld|nether|end> <X Z> <name>: add a marker called <name> on given coordinates ",
 			method: m.markerAdd,
 		},
 		{
@@ -78,6 +78,7 @@ type Marker struct {
 	Z           int    `json:"z"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	Dimension   string `json:"dimension"`
 }
 
 func (m *module) markerAdd(user, s string) {
@@ -111,7 +112,7 @@ func (m *module) markerAdd(user, s string) {
 			nb++
 		}
 		if nb == MaxMarkersPerPlayer {
-			m.discord.Send(m.channelID, "You already have two markers.")
+			m.discord.Sendf(m.channelID, "You already have %d markers.", MaxMarkersPerPlayer)
 			return
 		}
 	}
@@ -125,20 +126,21 @@ func (m *module) markerAdd(user, s string) {
 	m.discord.Send(m.channelID, "Marker added")
 }
 
-var markerRegex = regexp.MustCompile(`^(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(.*)$`)
+var markerRegex = regexp.MustCompile(`^(overworld|nether|end)\s+(-?\d+)\s+(-?\d+)\s+(.*)$`)
 
 func markerFromString(user, s string) (*Marker, error) {
 	marker := Marker{
 		ID:          "PlayerBase",
 		Description: user,
+		Y:           64,
 	}
 	markerRegexRes := markerRegex.FindStringSubmatch(strings.TrimSpace(s))
 	if len(markerRegexRes) != 5 {
 		return nil, errors.New("unable to parse marker")
 	}
 
-	marker.X, _ = strconv.Atoi(markerRegexRes[1])
-	marker.Y, _ = strconv.Atoi(markerRegexRes[2])
+	marker.Dimension = markerRegexRes[1]
+	marker.X, _ = strconv.Atoi(markerRegexRes[2])
 	marker.Z, _ = strconv.Atoi(markerRegexRes[3])
 	marker.Name = markerRegexRes[4]
 
@@ -171,7 +173,7 @@ func (m *module) markerList(user, _ string) {
 	for i := range data {
 		if data[i].Description == user {
 			hasMarkers = true
-			sb.WriteString(fmt.Sprintf("- **%s**: %d %d %d\n", data[i].Name, data[i].X, data[i].Y, data[i].Z))
+			sb.WriteString(fmt.Sprintf("- **%s**: %d %d (%s)\n", data[i].Name, data[i].X, data[i].Z, data[i].Dimension))
 		}
 	}
 
