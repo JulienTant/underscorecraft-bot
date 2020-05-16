@@ -45,7 +45,7 @@ func New(discord *discord.Client, channelID string, jsonFilePath string) *module
 		},
 		{
 			prefix: "!marker-add",
-			help:   "<overworld|nether|end> <X Z> <name>: add a marker called <name> on given coordinates ",
+			help:   "<overworld|nether|end> <X Z> <name>: add a marker called <name> on given coordinates",
 			method: m.markerAdd,
 		},
 		{
@@ -123,7 +123,7 @@ func (m *module) markerAdd(user, s string) {
 	if err != nil {
 		log.Printf("[err] unable to save markers...")
 	}
-	m.discord.Send(m.channelID, "Marker added")
+	m.discord.Send(m.channelID, "Marker added. It'll be on the map in maximum a minute...")
 }
 
 var markerRegex = regexp.MustCompile(`^(overworld|nether|end)\s+(-?\d+)\s+(-?\d+)\s+(.*)$`)
@@ -151,7 +151,7 @@ func (m *module) markerList(user, _ string) {
 	file, err := ioutil.ReadFile(m.jsonFilePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			m.discord.Send(m.channelID, "unable to read the marker file :(")
+			m.discord.Send(m.channelID, "Unable to read the marker file :( Please reach TontonAo")
 			log.Printf("[err] unable to read marker file: %s", err)
 			return
 		}
@@ -178,7 +178,7 @@ func (m *module) markerList(user, _ string) {
 	}
 
 	if !hasMarkers {
-		m.discord.Send(m.channelID, "You have no markers")
+		m.discord.Send(m.channelID, "You have no markers!")
 		return
 	}
 
@@ -189,7 +189,7 @@ func (m *module) markerRemove(user, s string) {
 	file, err := ioutil.ReadFile(m.jsonFilePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			m.discord.Send(m.channelID, "unable to read the marker file :(")
+			m.discord.Send(m.channelID, "Unable to read the marker file :( Please reach TontonAo")
 			log.Printf("[err] unable to read marker file: %s", err)
 			return
 		}
@@ -228,7 +228,7 @@ func (m *module) markerRemove(user, s string) {
 		log.Printf("[err] unable to save markers...")
 	}
 
-	m.discord.Send(m.channelID, "marker removed")
+	m.discord.Send(m.channelID, "Marker removed. It'll be dropped from the map in maximum a minute...")
 }
 
 func (m *module) OnNewDiscordMessage(user string, msg string) {
