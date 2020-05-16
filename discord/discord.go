@@ -33,13 +33,13 @@ func (c *Client) Session() *discordgo.Session {
 	return c.s
 }
 
-func (c *Client) OnNewMessage(chatChannelID string, fn func(string, string)) {
+func (c *Client) OnNewMessage(channelID string, fn func(string, string)) {
 	c.s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
 		}
 
-		if chatChannelID != "all" && m.ChannelID != chatChannelID {
+		if channelID != "all" && m.ChannelID != channelID {
 			return
 		}
 

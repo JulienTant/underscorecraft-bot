@@ -6,6 +6,7 @@ import (
 	"docker-minecraft-to-discord/chat"
 	"docker-minecraft-to-discord/discord"
 	"docker-minecraft-to-discord/docker"
+	"docker-minecraft-to-discord/maps"
 	"fmt"
 	"log"
 	"os"
@@ -61,6 +62,11 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatalf("get admin-channel-id: %s", err)
 	}
 
+	mapsChannelID, err := cmd.Flags().GetString("maps-channel-id")
+	if err != nil {
+		log.Fatalf("get maps-channel-id: %s", err)
+	}
+
 	containerLabel, err := cmd.Flags().GetString("container-label")
 	if err != nil {
 		log.Fatalf("get container-label: %s", err)
@@ -101,6 +107,9 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 
 	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container)
 	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
+
+	mapsModule := maps.New(discordClient, mapsChannelID, "/markers/markers.json")
+	discordClient.OnNewMessage(mapsChannelID, mapsModule.OnNewDiscordMessage)
 
 	log.Fatalf("listen stopped: %s", attached.Listen(ctx, inactivityDuration, func() bool {
 		return dockerClient.IsContainerAlive(ctx, container, startedAt)
