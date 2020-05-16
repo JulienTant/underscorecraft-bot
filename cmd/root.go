@@ -18,10 +18,12 @@ func init() {
 	rootCmd.Flags().String("container-label", "com.mc2discord.is_server", "minecraft container name")
 	rootCmd.Flags().String("chat-channel-id", "", "discord chat channel id")
 	rootCmd.Flags().String("admin-channel-id", "", "discord admin channel id")
+	rootCmd.Flags().String("maps-channel-id", "", "discord maps channel id")
 	rootCmd.Flags().String("bot-token", "", "discord bot token")
 
 	_ = rootCmd.MarkFlagRequired("admin-channel-id")
 	_ = rootCmd.MarkFlagRequired("chat-channel-id")
+	_ = rootCmd.MarkFlagRequired("maps-channel-id")
 	_ = rootCmd.MarkFlagRequired("bot-token")
 }
 

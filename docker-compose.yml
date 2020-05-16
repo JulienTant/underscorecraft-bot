@@ -3,6 +3,10 @@ version: '3.4'
 services:
   dm2d:
     build: .
-    command: "--chat-channel-id=${CHAT_CHANNEL_ID} --admin-channel-id=${ADMIN_CHANNEL_ID} --bot-token=${BOT_TOKEN}"
+    command: "--chat-channel-id=${CHAT_CHANNEL_ID} --admin-channel-id=${ADMIN_CHANNEL_ID} --maps-channel-id=${MAPS_CHANNEL_ID} --bot-token=${BOT_TOKEN}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - markers:/markers
+
+volumes:
+  markers:
