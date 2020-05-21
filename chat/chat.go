@@ -2,12 +2,18 @@ package chat
 
 import (
 	"bytes"
+	"context"
 	"docker-minecraft-to-discord/discord"
 	"docker-minecraft-to-discord/docker"
 	"docker-minecraft-to-discord/loganalyzer"
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
+
+	"github.com/bwmarrin/discordgo"
+
+	mcpinger "github.com/Raqbit/mc-pinger"
 )
 
 type module struct {
@@ -83,4 +89,25 @@ func (m *module) OnNewAttachedMessage(s string) error {
 		}
 	}
 	return nil
+}
+
+func (m *module) RefreshOnlinePlayers(ctx context.Context) {
+	pinger := mcpinger.New("underscorecraft.com", 25565)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			info, err := pinger.Ping()
+			if err != nil {
+				log.Println(err)
+			} else {
+				m.discord.Session().ChannelEditComplex(m.channel, &discordgo.ChannelEdit{
+					Topic: fmt.Sprintf("%d players online - IP: underscorecraft.com", info.Players.Online),
+				})
+			}
+			time.Sleep(30 * time.Second)
+		}
+	}
 }
