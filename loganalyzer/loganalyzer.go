@@ -83,7 +83,7 @@ func Analyze(line string) interface{} {
 
 	for _, v := range deathMsgContains {
 		deathGameRes := v.FindStringSubmatch(secondPart)
-		if len(deathGameRes) >= 3 {
+		if len(deathGameRes) >= 3 && deathGameRes[1] != "Villager" {
 			return DeathPayload{Username: deathGameRes[1], Cause: deathGameRes[2]}
 		}
 	}
