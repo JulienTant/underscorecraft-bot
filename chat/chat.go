@@ -103,11 +103,16 @@ func (m *module) RefreshOnlinePlayers(ctx context.Context) {
 			if err != nil {
 				log.Println(err)
 			} else {
+				ch, err := m.discord.Session().Channel(m.channel)
+				if err != nil {
+					continue
+				}
 				m.discord.Session().ChannelEditComplex(m.channel, &discordgo.ChannelEdit{
-					Topic: fmt.Sprintf("%d players online - IP: underscorecraft.com", info.Players.Online),
+					Topic:    fmt.Sprintf("%d players online - IP: underscorecraft.com", info.Players.Online),
+					Position: ch.Position,
 				})
 			}
-			time.Sleep(5 * time.Second)
+			time.Sleep(15 * time.Second)
 		}
 	}
 }
