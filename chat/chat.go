@@ -107,7 +107,7 @@ func (m *module) RefreshOnlinePlayers(ctx context.Context) {
 					Topic: fmt.Sprintf("%d players online - IP: underscorecraft.com", info.Players.Online),
 				})
 			}
-			time.Sleep(30 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
