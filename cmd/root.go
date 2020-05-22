@@ -104,7 +104,7 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 	chatModule := chat.New(discordClient, chatChannelID, attached)
 	discordClient.OnNewMessage(chatChannelID, chatModule.OnNewDiscordMessage)
 	attached.OnNewMessage("discord <> mc chat", chatModule.OnNewAttachedMessage)
-	chatModule.RefreshOnlinePlayers(ctx)
+	go chatModule.RefreshOnlinePlayers(ctx)
 
 	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container)
 	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
