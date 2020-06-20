@@ -50,7 +50,7 @@ func (c *Client) OnNewMessage(channelID string, fn func(string, string)) {
 
 		username := m.Member.Nick
 		if username == "" {
-			username = m.Member.User.Username
+			username = m.Author.Username
 		}
 		fn(username, c)
 
