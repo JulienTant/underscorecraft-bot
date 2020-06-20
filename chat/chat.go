@@ -102,6 +102,7 @@ func (m *module) RefreshOnlinePlayers(ctx context.Context) {
 			info, err := pinger.Ping()
 			if err != nil {
 				log.Println(err)
+				pinger = mcpinger.New("underscorecraft.com", 25565)
 			} else {
 				ch, err := m.discord.Session().Channel(m.channel)
 				if err != nil {
