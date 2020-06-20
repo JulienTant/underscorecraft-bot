@@ -48,7 +48,11 @@ func (c *Client) OnNewMessage(channelID string, fn func(string, string)) {
 			return
 		}
 
-		fn(m.Member.Nick, c)
+		username := m.Member.Nick
+		if username == "" {
+			username = m.Member.User.Username
+		}
+		fn(username, c)
 
 	})
 }
