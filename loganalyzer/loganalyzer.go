@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var serverThreadLogRgx = regexp.MustCompile(`\[Server thread/INFO]: (.*)`)
+var serverThreadLogRgx = regexp.MustCompile(`\[.*:.*:.* INFO]: (.*)`)
 var newMsgRgx = regexp.MustCompile(`^<([a-zA-Z0-9_]+)> (.*)$`)
 var leftGameRgx = regexp.MustCompile(`^([a-zA-Z0-9_]+) left the game$`)
 var joinGameRgx = regexp.MustCompile(`^([a-zA-Z0-9_]+) joined the game$`)
