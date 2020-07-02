@@ -153,7 +153,7 @@ func (m *module) getMarkers(userID string) []Marker {
 			kv := strings.Split(p, ":")
 			switch kv[0] {
 			case "label":
-				m.Name = kv[1]
+				m.Name = strings.Trim(kv[1], `"`)
 			case "world":
 				switch kv[1] {
 				case "world":
