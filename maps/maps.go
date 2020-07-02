@@ -79,6 +79,10 @@ func (m Marker) ToAddCommand() string {
 	return fmt.Sprintf(`dmarker add "%s" id:%s world:%s x:%f y:64 z:%f set:Bases`, m.Name, m.ID, m.World, m.X, m.Z)
 }
 
+func (m Marker) ToRemoveCommand() string {
+	return fmt.Sprintf(`dmarker delete id:%s set:Bases`, m.ID)
+}
+
 func (m *module) help(_, _, _ string) {
 	commands := []string{}
 	for i := range actions {
@@ -194,49 +198,22 @@ func (m *module) markerList(userID, _, _ string) {
 }
 
 func (m *module) markerRemove(userID, _, s string) {
-	/*file, err := ioutil.ReadFile(m.jsonFilePath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			m.discord.Send(m.channelID, "Unable to read the marker file :( Please reach TontonAo")
-			log.Printf("[err] unable to read marker file: %s", err)
+	markers := m.getMarkers(userID)
+
+	for i := range markers {
+		if markers[i].Name == s {
+			res := m.actualRcon(markers[i].ToRemoveCommand())
+			if !strings.Contains(res, "Deleted marker") {
+				log.Println(res)
+				m.discord.Send(m.channelID, "Unable to remove marker. Contact an admin")
+				return
+			}
+			m.discord.Send(m.channelID, "Marker removed.")
 			return
 		}
-		_, err = os.Create(m.jsonFilePath)
-		if err != nil {
-			log.Printf("[err] unable to create markers file: %s", err)
-			return
-		}
-	}
-	data := []Marker{}
-	err = json.Unmarshal(file, &data)
-	if err != nil {
-		log.Print("[err] unable to unmarshal markers...meh")
 	}
 
-	found := false
-	i := 0
-	for _, marker := range data {
-		if !(marker.Description == user && marker.Name == s) {
-			data[i] = marker
-			i++
-		} else {
-			found = true
-		}
-	}
-	data = data[:i]
-
-	if !found {
-		m.discord.Sendf(m.channelID, "You have no markers named %s", s)
-		return
-	}
-
-	b, _ := json.Marshal(data)
-	err = ioutil.WriteFile(m.jsonFilePath, b, 0644)
-	if err != nil {
-		log.Printf("[err] unable to save markers...")
-	}
-
-	m.discord.Send(m.channelID, "Marker removed. It'll be dropped from the map in maximum a minute...")*/
+	m.discord.Sendf(m.channelID, "You have no markers named %s", s)
 }
 
 func (m *module) OnNewDiscordMessage(userid, user, msg string) {
