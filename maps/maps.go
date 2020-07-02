@@ -76,7 +76,7 @@ type Marker struct {
 }
 
 func (m Marker) ToAddCommand() string {
-	return fmt.Sprintf(`dmarker add "%s" id:%s world:%s x:%f y:64 z:%f set:Bases`, m.Name, m.ID, m.World, m.X, m.Z)
+	return fmt.Sprintf(`dmarker add "%s" id:%s world:%s x:%f y:64 z:%f set:Bases markup:true`, m.Name, m.ID, m.World, m.X, m.Z)
 }
 
 func (m Marker) ToRemoveCommand() string {
