@@ -33,7 +33,7 @@ func (c *Client) Session() *discordgo.Session {
 	return c.s
 }
 
-func (c *Client) OnNewMessage(channelID string, fn func(string, string)) {
+func (c *Client) OnNewMessage(channelID string, fn func(userID string, username string, content string)) {
 	c.s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if m.Author.ID == s.State.User.ID {
 			return
@@ -52,7 +52,7 @@ func (c *Client) OnNewMessage(channelID string, fn func(string, string)) {
 		if username == "" {
 			username = m.Author.Username
 		}
-		fn(username, c)
+		fn(m.Author.ID, username, c)
 
 	})
 }

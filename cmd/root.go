@@ -109,7 +109,7 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container)
 	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
 
-	mapsModule := maps.New(discordClient, mapsChannelID, "/markers/markers.json")
+	mapsModule := maps.New(discordClient, mapsChannelID, dockerClient, container)
 	discordClient.OnNewMessage(mapsChannelID, mapsModule.OnNewDiscordMessage)
 
 	log.Fatalf("listen stopped: %s", attached.Listen(ctx, inactivityDuration, func() bool {

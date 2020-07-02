@@ -32,7 +32,7 @@ func New(discord *discord.Client, channel string, attached *docker.Attached) *mo
 	}
 }
 
-func (m *module) OnNewDiscordMessage(username, msg string) {
+func (m *module) OnNewDiscordMessage(_, username, msg string) {
 	b, _ := json.Marshal(username)
 	secureUsername := string(bytes.Trim(b, `"`))
 	b, _ = json.Marshal(msg)

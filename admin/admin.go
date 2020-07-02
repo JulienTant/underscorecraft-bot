@@ -78,7 +78,7 @@ func New(discord *discord.Client, adminChannelID string, dockerClient *docker.Cl
 	return m
 }
 
-func (m *module) OnNewDiscordMessage(_ string, msg string) {
+func (m *module) OnNewDiscordMessage(_, _ string, msg string) {
 	for i := range actions {
 		if strings.HasPrefix(msg, actions[i].prefix) {
 			actions[i].method(strings.TrimSpace(strings.TrimPrefix(msg, actions[i].prefix)))
