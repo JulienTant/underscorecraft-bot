@@ -173,6 +173,7 @@ func (m *module) getMarkers(userID string) []Marker {
 		}
 		markers = append(markers, m)
 	}
+	return markers
 }
 
 func (m *module) markerList(userID, _, _ string) {
