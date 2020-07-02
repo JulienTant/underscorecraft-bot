@@ -135,50 +135,58 @@ func markerFromString(userID, s string) (*Marker, error) {
 	return &marker, nil
 }
 
+func (m *module) getMarkers(userID string) []Marker {
+	markersAsString := strings.Split(m.actualRcon("dmarker list set:Bases"), "\n")
+
+	var markers []Marker
+	for _, v := range markersAsString {
+		if !strings.HasPrefix(v, userID) {
+			continue
+		}
+
+		m := Marker{ID: v[:strings.Index(v, ":")]}
+		parts := strings.Split(v[strings.Index(v, ":")+2:], ", ")
+		for _, p := range parts {
+			kv := strings.Split(p, ":")
+			switch kv[0] {
+			case "label":
+				m.Name = kv[1]
+			case "world":
+				switch kv[1] {
+				case "world":
+					m.World = "overworld"
+				case "world_nether":
+					m.World = "nether"
+				case "world_the_end":
+					m.World = "the_end"
+				}
+			case "x":
+				x, _ := strconv.ParseFloat(kv[1], 64)
+				m.X = x
+			case "z":
+				z, _ := strconv.ParseFloat(kv[1], 64)
+				m.Z = z
+			}
+		}
+		markers = append(markers, m)
+	}
+}
+
 func (m *module) markerList(userID, _, _ string) {
-	markersAsString := m.actualRcon("dmarker list set:Bases")
-	log.Println(markersAsString)
-	markersAsStringList := strings.Split(markersAsString, "\n")
-	for _, v := range markersAsStringList {
-		m.discord.Send(m.channelID, v)
-	}
-	// (id): label:"(name)", set:Bases,
+	markers := m.getMarkers(userID)
 
-	/*file, err := ioutil.ReadFile(m.jsonFilePath)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			m.discord.Send(m.channelID, "Unable to read the marker file :( Please reach TontonAo")
-			log.Printf("[err] unable to read marker file: %s", err)
-			return
-		}
-		_, err = os.Create(m.jsonFilePath)
-		if err != nil {
-			log.Printf("[err] unable to create markers file: %s", err)
-			return
-		}
-	}
-	data := []Marker{}
-	err = json.Unmarshal(file, &data)
-	if err != nil {
-		log.Print("[err] unable to unmarshal markers...meh")
-	}
-
-	hasMarkers := false
-	sb := strings.Builder{}
-	sb.WriteString("Here are your markers:\n")
-	for i := range data {
-		if data[i].Description == user {
-			hasMarkers = true
-			sb.WriteString(fmt.Sprintf("- **%s**: %d %d (%s)\n", data[i].Name, data[i].X, data[i].Z, data[i].Dimension))
-		}
-	}
-
-	if !hasMarkers {
+	if len(markers) == 0 {
 		m.discord.Send(m.channelID, "You have no markers!")
 		return
 	}
 
-	m.discord.Send(m.channelID, sb.String())*/
+	sb := strings.Builder{}
+	sb.WriteString("Here are your markers:\n")
+	for i := range markers {
+		sb.WriteString(fmt.Sprintf("- **%s**: %.1f %.1f (%s)\n", markers[i].Name, markers[i].X, markers[i].Z, markers[i].World))
+	}
+
+	m.discord.Send(m.channelID, sb.String())
 }
 
 func (m *module) markerRemove(userID, _, s string) {
