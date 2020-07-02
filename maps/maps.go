@@ -94,9 +94,12 @@ func (m *module) markerAdd(userID, _, s string) {
 		return
 	}
 
-	// TODO: count
+	mks := m.getMarkers(userID)
+	if len(mks) >= MaxMarkersPerPlayer {
+		m.discord.Sendf(m.channelID, "You already have %d markers", len(mks))
+		return
+	}
 
-	// add it
 	res := m.actualRcon(marker.ToAddCommand())
 	if !strings.Contains(res, "Added marker") {
 		log.Println("unable to add marker: ", res)
