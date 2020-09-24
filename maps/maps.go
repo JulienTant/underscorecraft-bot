@@ -144,6 +144,7 @@ func markerFromString(userID, s string) (*Marker, error) {
 
 func (m *module) getMarkers(userID string) []Marker {
 	markersAsString := strings.Split(m.actualRcon("dmarker list set:Bases"), "\n")
+	log.Println(markersAsString)
 
 	var markers []Marker
 	for _, v := range markersAsString {
