@@ -6,7 +6,8 @@ services:
     command: "--chat-channel-id=${CHAT_CHANNEL_ID} --admin-channel-id=${ADMIN_CHANNEL_ID} --maps-channel-id=${MAPS_CHANNEL_ID} --bot-token=${BOT_TOKEN}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - markers:/markers
+      - server_mcdata-ch1-2:/mc
 
 volumes:
-  markers:
+  server_mcdata-ch1-2:
+    external: true

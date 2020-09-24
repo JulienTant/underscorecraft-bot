@@ -6,6 +6,7 @@ import (
 	"docker-minecraft-to-discord/docker"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"regexp"
 	"strconv"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/ghodss/yaml"
 )
 
 const MaxMarkersPerPlayer = 5
@@ -142,7 +144,7 @@ func markerFromString(userID, s string) (*Marker, error) {
 	return &marker, nil
 }
 
-func (m *module) getMarkers(userID string) []Marker {
+func (m *module) oldGetMarkers(userID string) []Marker {
 	markersAsString := strings.Split(m.actualRcon("dmarker list set:Bases"), "\n")
 	log.Println(markersAsString)
 
@@ -258,4 +260,50 @@ func (m *module) actualRcon(command string) string {
 		}
 		bs = append(bs, b...)
 	}
+}
+
+func (m *module) getMarkers(userID string) []Marker {
+	dat, err := ioutil.ReadFile("/mc/plugins/dynmap/markers.yml")
+	if err != nil {
+		panic(err)
+	}
+
+	p := map[string]interface{}{}
+	yaml.Unmarshal(dat, &p)
+
+	var mkers []Marker
+
+	markers := p["sets"].(map[string]interface{})["Bases"].(map[string]interface{})["markers"].(map[string]interface{})
+	for i := range markers {
+		if !strings.HasPrefix(i, userID) {
+			continue
+		}
+
+		v := markers[i].(map[string]interface{})
+		fmt.Printf("%#v", v)
+
+		m := Marker{ID: i}
+		for j := range v {
+			switch j {
+			case "label":
+				m.Name = strings.Trim(v[j].(string), `"`)
+			case "world":
+				switch v[j].(string) {
+				case "world":
+					m.World = "overworld"
+				case "world_nether":
+					m.World = "nether"
+				case "world_the_end":
+					m.World = "the_end"
+				}
+			case "x":
+				m.X = v[j].(float64)
+			case "z":
+				m.Z = v[j].(float64)
+			}
+		}
+		mkers = append(mkers, m)
+	}
+
+	return mkers
 }

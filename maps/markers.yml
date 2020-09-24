@@ -1,0 +1,319 @@
+%YAML 1.1
+---
+icons: {
+}
+sets:
+  markers:
+    hide: false
+    circles: {
+    }
+    deficon: default
+    areas: {
+    }
+    label: Markers
+    markers:
+      c_endportal:
+        world: world_nether
+        markup: false
+        x: 20.0
+        icon: temple
+        y: 33.0
+        z: 223.0
+        label: End Portal
+    lines: {
+    }
+    layerprio: 0
+  Bases:
+    hide: false
+    circles: {
+    }
+    deficon: default
+    areas: {
+    }
+    label: Bases
+    markers:
+      '229360405388984330_1595596183064435089':
+        world: world
+        markup: true
+        x: 980.0
+        icon: default
+        y: 64.0
+        z: 1720.0
+        label: Bacarra's Starter Base
+      '319234641636753409_1593679317755600984':
+        world: world
+        markup: true
+        x: -368.0
+        icon: default
+        y: 64.0
+        z: -626.0
+        label: Harrys Base
+      '334505084085993472_1598555386218253617':
+        world: world_nether
+        markup: true
+        x: 604.0
+        icon: default
+        y: 64.0
+        z: 604.0
+        label: Crim's Portal
+      '229360405388984330_1595596088032911488':
+        world: world
+        markup: true
+        x: 3585.0
+        icon: default
+        y: 64.0
+        z: 2670.0
+        label: Future Location of Bacarra's Base
+      '427842860008865793_1593900177267493705':
+        world: world
+        markup: true
+        x: -1337.0
+        icon: default
+        y: 64.0
+        z: 4657.0
+        label: L1nks' Farming Outpost
+      '237159269521162241_1593678878250231126':
+        world: world
+        markup: true
+        x: -1511.0
+        icon: default
+        y: 64.0
+        z: -3065.0
+        label: Cynderzilla & TontonAo's base
+      '337122184457879552_1593716634682383700':
+        world: world
+        markup: true
+        x: -1905.0
+        icon: default
+        y: 64.0
+        z: 1970.0
+        label: Alpine Region of wreiner
+      '250793284161634306_1597860027427391511':
+        world: world
+        markup: true
+        x: -7580.0
+        icon: default
+        y: 64.0
+        z: -8050.0
+        label: BCJ's Fancy Farm World
+      '726140461097680896_1600622642073317064':
+        world: world
+        markup: true
+        x: -5577.0
+        icon: default
+        y: 64.0
+        z: 1616.0
+        label: Zerry's Base
+      '362393284200497162_1600618180729293531':
+        world: world
+        markup: true
+        x: 1552.0
+        icon: default
+        y: 64.0
+        z: -3846.0
+        label: Archrend's Mountain Fortress (Coming Soon)
+      '338754604646793218_1600846244539978344':
+        world: world
+        markup: true
+        x: 3000.0
+        icon: default
+        y: 64.0
+        z: 4700.0
+        label: AmVi’s Starter Base
+      '486151243769839620_1593679295070143581':
+        world: world
+        markup: true
+        x: -2251.0
+        icon: default
+        y: 64.0
+        z: 1345.0
+        label: Ponyin's Base
+      '337122184457879552_1593716642224127352':
+        world: world
+        markup: true
+        x: -1675.0
+        icon: default
+        y: 64.0
+        z: 1767.0
+        label: Mountaineering Village of wreiner
+      '199888699561869322_1596447467471229781':
+        world: world
+        markup: true
+        x: -540.0
+        icon: default
+        y: 64.0
+        z: 1862.0
+        label: Scarsn's Gate
+      '328279616546668545_1594914838333755954':
+        world: world
+        markup: true
+        x: -1025.0
+        icon: default
+        y: 64.0
+        z: 645.0
+        label: Dranyiks Den
+      '319234641636753409_1599256824960193815':
+        world: world_nether
+        markup: true
+        x: -308.0
+        icon: default
+        y: 64.0
+        z: 1223.0
+        label: Harry Raid
+      '265312395675566080_1594878963513846548':
+        world: world
+        markup: true
+        x: 41.0
+        icon: default
+        y: 64.0
+        z: 8421.0
+        label: The Forgotten City
+      '739892331012161566_1598723734612768268':
+        world: world
+        markup: true
+        x: 3730.0
+        icon: default
+        y: 64.0
+        z: 1111.0
+        label: Monkey Stark Base (coming someday)
+      '250793284161634306_1593699705159174596':
+        world: world
+        markup: true
+        x: -3600.0
+        icon: default
+        y: 64.0
+        z: 1850.0
+        label: Wild West Collab Town (Engise and BCJ)
+      '334505084085993472_1598227303461812331':
+        world: world
+        markup: true
+        x: 4832.0
+        icon: default
+        y: 64.0
+        z: 4832.0
+        label: Crimson Sea
+      '334505084085993472_1598555343268221394':
+        world: world
+        markup: true
+        x: 7650.0
+        icon: default
+        y: 64.0
+        z: 4837.0
+        label: Crim's Desert/Frozen Ocean
+      '181314093435584521_1600680188331850524':
+        world: world
+        markup: true
+        x: -2097.0
+        icon: default
+        y: 64.0
+        z: 2041.0
+        label: ExceldoY's Starter Base
+      '268886877325492235_1595484159768974711':
+        world: world
+        markup: true
+        x: 1472.0
+        icon: default
+        y: 64.0
+        z: 518.0
+        label: Bortar's Mountain Village
+      '690985407625691157_1594759361249191948':
+        world: world
+        markup: true
+        x: -3600.0
+        icon: default
+        y: 64.0
+        z: -3000.0
+        label: Malfoy's Manor
+      '515658416493166604_1600653184751326364':
+        world: world
+        markup: true
+        x: -7940.0
+        icon: default
+        y: 64.0
+        z: -1474.0
+        label: Silly's Base
+      '362393284200497162_1600921678298833470':
+        world: world
+        markup: true
+        x: 1311.0
+        icon: default
+        y: 64.0
+        z: -5519.0
+        label: Archrend & Bortar's Squid Farm
+      '362393284200497162_1600618114764035338':
+        world: world
+        markup: true
+        x: 2058.0
+        icon: default
+        y: 64.0
+        z: -3113.0
+        label: Archrend's Starter Base
+      '364477177481396224_1600973407873717321':
+        world: world
+        markup: true
+        x: -7648.0
+        icon: default
+        y: 64.0
+        z: 989.0
+        label: rainbow kingdom
+      '604345562812252160_1593728015668143984':
+        world: world
+        markup: true
+        x: 1762.0
+        icon: default
+        y: 64.0
+        z: 1215.0
+        label: Sweet_T_Tracy's Jungle Base
+      '268886877325492235_1595484219862442947':
+        world: world
+        markup: true
+        x: 1900.0
+        icon: default
+        y: 64.0
+        z: 430.0
+        label: Bortar's Gold Farm
+      '604345562812252160_1595816494417607395':
+        world: world
+        markup: true
+        x: 2111.0
+        icon: default
+        y: 64.0
+        z: 2008.0
+        label: Sweet_T_Tracy's Art Studio
+      '427842860008865793_1593900408388342129':
+        world: world
+        markup: true
+        x: -5882.0
+        icon: default
+        y: 64.0
+        z: -2793.0
+        label: L1nks' Base
+      '362393284200497162_1600618282244019608':
+        world: world
+        markup: true
+        x: 4789.0
+        icon: default
+        y: 64.0
+        z: -8490.0
+        label: Archrend's Witch Farm
+      '195187726067171329_1593733786434699461':
+        world: world
+        markup: true
+        x: 851.0
+        icon: default
+        y: 64.0
+        z: 2819.0
+        label: Ztaffe's Base
+      '726140461097680896_1600972453224764713':
+        world: world
+        markup: true
+        x: -5560.0
+        icon: default
+        y: 64.0
+        z: 1608.0
+        label: Zerry Manor
+    lines: {
+    }
+    layerprio: 0
+playersets: {
+}
