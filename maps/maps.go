@@ -222,6 +222,7 @@ func (m *module) OnNewDiscordMessage(userid, user, msg string) {
 }
 
 func (m *module) actualRcon(command string) string {
+	log.Println("send command", command)
 	res, err := m.rcon.SendCommand(command)
 	if err != nil {
 		log.Println("[err] SendCommand", err)
