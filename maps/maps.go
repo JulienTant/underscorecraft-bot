@@ -1,29 +1,24 @@
 package maps
 
 import (
-	"context"
 	"docker-minecraft-to-discord/discord"
-	"docker-minecraft-to-discord/docker"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/ghodss/yaml"
+	mcrcon "github.com/Kelwing/mc-rcon"
 )
 
 const MaxMarkersPerPlayer = 5
 
 type module struct {
-	discord      *discord.Client
-	channelID    string
-	dockerClient *docker.Client
-	container    *docker.Container
+	discord   *discord.Client
+	channelID string
+	rcon      *mcrcon.MCConn
 }
 
 type action struct {
@@ -34,13 +29,12 @@ type action struct {
 
 var actions []action
 
-func New(discord *discord.Client, channelID string, dockerClient *docker.Client, container *docker.Container) *module {
+func New(discord *discord.Client, channelID string, rcon *mcrcon.MCConn) *module {
 
 	m := &module{
-		discord:      discord,
-		channelID:    channelID,
-		dockerClient: dockerClient,
-		container:    container,
+		discord:   discord,
+		channelID: channelID,
+		rcon:      rcon,
 	}
 
 	actions = []action{
@@ -144,7 +138,7 @@ func markerFromString(userID, s string) (*Marker, error) {
 	return &marker, nil
 }
 
-func (m *module) oldGetMarkers(userID string) []Marker {
+func (m *module) getMarkers(userID string) []Marker {
 	markersAsString := strings.Split(m.actualRcon("dmarker list set:Bases"), "\n")
 	log.Println(markersAsString)
 
@@ -194,7 +188,7 @@ func (m *module) markerList(userID, _, _ string) {
 	sb := strings.Builder{}
 	sb.WriteString("Here are your markers:\n")
 	for i := range markers {
-		sb.WriteString(fmt.Sprintf("- **%s**: %.1f %.1f (%s)\n", markers[i].Name, markers[i].X, markers[i].Z, markers[i].World))
+		sb.WriteString(fmt.Sprintf("- **%s**: x=%.0f z=%.0f (%s)\n", markers[i].Name, markers[i].X, markers[i].Z, markers[i].World))
 	}
 
 	m.discord.Send(m.channelID, sb.String())
@@ -228,82 +222,10 @@ func (m *module) OnNewDiscordMessage(userid, user, msg string) {
 }
 
 func (m *module) actualRcon(command string) string {
-	cmd := append([]string{"rcon-cli"}, strings.Split(command, " ")...)
-	id, err := m.dockerClient.InnerClient().ContainerExecCreate(context.Background(), m.container.ID, types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
-		Cmd:          cmd,
-	})
+	res, err := m.rcon.SendCommand(command)
 	if err != nil {
-		log.Println("[err] whitelist ContainerExecCreate", err)
+		log.Println("[err] SendCommand", err)
 	}
 
-	a, err := m.dockerClient.InnerClient().ContainerExecAttach(context.Background(), id.ID, types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
-		Cmd:          cmd,
-	})
-	if err != nil {
-		log.Println("[err] whitelist ContainerExecAttach", err)
-	}
-
-	var bs []byte
-	for {
-		_ = a.Conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-		b, err := a.Reader.ReadBytes('\n')
-		if err != nil {
-			sb := strings.Builder{}
-			sb.Write(bs[8 : len(bs)-1])
-			a.Close()
-			return sb.String()
-		}
-		bs = append(bs, b...)
-	}
-}
-
-func (m *module) getMarkers(userID string) []Marker {
-	dat, err := ioutil.ReadFile("/mc/plugins/dynmap/markers.yml")
-	if err != nil {
-		panic(err)
-	}
-
-	p := map[string]interface{}{}
-	yaml.Unmarshal(dat, &p)
-
-	var mkers []Marker
-
-	markers := p["sets"].(map[string]interface{})["Bases"].(map[string]interface{})["markers"].(map[string]interface{})
-	for i := range markers {
-		if !strings.HasPrefix(i, userID) {
-			continue
-		}
-
-		v := markers[i].(map[string]interface{})
-		fmt.Printf("%#v", v)
-
-		m := Marker{ID: i}
-		for j := range v {
-			switch j {
-			case "label":
-				m.Name = strings.Trim(v[j].(string), `"`)
-			case "world":
-				switch v[j].(string) {
-				case "world":
-					m.World = "overworld"
-				case "world_nether":
-					m.World = "nether"
-				case "world_the_end":
-					m.World = "the_end"
-				}
-			case "x":
-				m.X = v[j].(float64)
-			case "z":
-				m.Z = v[j].(float64)
-			}
-		}
-		mkers = append(mkers, m)
-	}
-
-	return mkers
+	return res
 }

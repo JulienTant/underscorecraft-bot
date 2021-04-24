@@ -1,29 +1,23 @@
 package cmd
 
 import (
-	"context"
-	"docker-minecraft-to-discord/admin"
-	"docker-minecraft-to-discord/chat"
 	"docker-minecraft-to-discord/discord"
-	"docker-minecraft-to-discord/docker"
 	"docker-minecraft-to-discord/maps"
 	"fmt"
+	mcrcon "github.com/Kelwing/mc-rcon"
+	"github.com/spf13/cobra"
 	"log"
 	"os"
-	"time"
-
-	"github.com/spf13/cobra"
 )
 
 func init() {
-	rootCmd.Flags().String("container-label", "com.mc2discord.is_server", "minecraft container name")
-	rootCmd.Flags().String("chat-channel-id", "", "discord chat channel id")
-	rootCmd.Flags().String("admin-channel-id", "", "discord admin channel id")
 	rootCmd.Flags().String("maps-channel-id", "", "discord maps channel id")
 	rootCmd.Flags().String("bot-token", "", "discord bot token")
+	rootCmd.Flags().String("server-address", "", "server address")
+	rootCmd.Flags().String("server-rcon-pass", "", "server rcon password")
 
-	_ = rootCmd.MarkFlagRequired("admin-channel-id")
-	_ = rootCmd.MarkFlagRequired("chat-channel-id")
+	_ = rootCmd.MarkFlagRequired("server-address")
+	_ = rootCmd.MarkFlagRequired("server-rcon-pass")
 	_ = rootCmd.MarkFlagRequired("maps-channel-id")
 	_ = rootCmd.MarkFlagRequired("bot-token")
 }
@@ -44,22 +38,9 @@ func Execute() {
 }
 
 func runRootCmd(cmd *cobra.Command, _ []string) {
-	startedAt := time.Now().UTC()
-	ctx := context.Background()
-
 	botToken, err := cmd.Flags().GetString("bot-token")
 	if err != nil {
 		log.Fatalf("get bot-token: %s", err)
-	}
-
-	chatChannelID, err := cmd.Flags().GetString("chat-channel-id")
-	if err != nil {
-		log.Fatalf("get chat-channel-id: %s", err)
-	}
-
-	adminChannelID, err := cmd.Flags().GetString("admin-channel-id")
-	if err != nil {
-		log.Fatalf("get admin-channel-id: %s", err)
 	}
 
 	mapsChannelID, err := cmd.Flags().GetString("maps-channel-id")
@@ -67,9 +48,14 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatalf("get maps-channel-id: %s", err)
 	}
 
-	containerLabel, err := cmd.Flags().GetString("container-label")
+	serverAddress, err := cmd.Flags().GetString("server-address")
 	if err != nil {
-		log.Fatalf("get container-label: %s", err)
+		log.Fatalf("get maps-channel-id: %s", err)
+	}
+
+	serverRconPassword, err := cmd.Flags().GetString("server-rcon-pass")
+	if err != nil {
+		log.Fatalf("get maps-channel-id: %s", err)
 	}
 
 	discordClient, err := discord.NewClient(botToken)
@@ -77,42 +63,21 @@ func runRootCmd(cmd *cobra.Command, _ []string) {
 		log.Fatalf("discord.NewClient: %s", err)
 	}
 
-	inactivityDurationStr := os.Getenv("INACTIVITY_DURATION")
-	inactivityDuration, err := time.ParseDuration(inactivityDurationStr)
-	if inactivityDuration == time.Duration(0) || err != nil {
-		log.Println("Setting default duration to one hour")
-		inactivityDuration = time.Hour
-	}
-
-	dockerClient, err := docker.NewClient()
+	conn := new(mcrcon.MCConn)
+	err = conn.Open(serverAddress, serverRconPassword)
 	if err != nil {
-		log.Fatalf("NewDockerClient: %s", err)
+		log.Fatalln("Open failed", err)
 	}
+	defer conn.Close()
 
-	log.Println("looking for minecraft container")
-	container, err := dockerClient.GetContainerWithLabel(ctx, containerLabel)
+	err = conn.Authenticate()
 	if err != nil {
-		log.Fatalf("get container", err)
-	}
-	log.Printf("found %s", container.ID)
-
-	attached, err := dockerClient.Attach(ctx, container)
-	if err != nil {
-		log.Fatal(err)
+		log.Fatalln("Auth failed", err)
 	}
 
-	chatModule := chat.New(discordClient, chatChannelID, attached)
-	discordClient.OnNewMessage(chatChannelID, chatModule.OnNewDiscordMessage)
-	attached.OnNewMessage("discord <> mc chat", chatModule.OnNewAttachedMessage)
-	go chatModule.RefreshOnlinePlayers(ctx)
-
-	adminModule := admin.New(discordClient, adminChannelID, dockerClient, container)
-	discordClient.OnNewMessage(adminChannelID, adminModule.OnNewDiscordMessage)
-
-	mapsModule := maps.New(discordClient, mapsChannelID, dockerClient, container)
+	mapsModule := maps.New(discordClient, mapsChannelID, conn)
 	discordClient.OnNewMessage(mapsChannelID, mapsModule.OnNewDiscordMessage)
 
-	log.Fatalf("listen stopped: %s", attached.Listen(ctx, inactivityDuration, func() bool {
-		return dockerClient.IsContainerAlive(ctx, container, startedAt)
-	}))
+	c := make(chan struct{})
+	<-c
 }
