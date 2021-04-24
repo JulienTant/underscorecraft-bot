@@ -227,6 +227,7 @@ func (m *module) actualRcon(command string) string {
 	if err != nil {
 		log.Println("[err] SendCommand", err)
 	}
+	log.Println("got result", res)
 
 	return res
 }
