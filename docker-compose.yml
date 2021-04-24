@@ -3,4 +3,4 @@ version: '3.4'
 services:
   dm2d:
     build: .
-    command: "./mc2d --maps-channel-id=${MAPS_CHANNEL_ID} --bot-token=${BOT_TOKEN} --server-address=${SERVER_ADDRESS} --server-rcon-pass=${SERVER_RCON_PASS}"
+    command: "--maps-channel-id=${MAPS_CHANNEL_ID} --bot-token=${BOT_TOKEN} --server-address=${SERVER_ADDRESS} --server-rcon-pass=${SERVER_RCON_PASS} --pterodactyl-address=${PTERODACTYL_ADDRESS} --pterodactyl-api-key=${PTERODACTYL_API_KEY} --pterodactyl-server-id=${PTERODACTYL_SERVER_ID}"

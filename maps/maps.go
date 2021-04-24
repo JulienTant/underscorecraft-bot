@@ -2,6 +2,7 @@ package maps
 
 import (
 	"docker-minecraft-to-discord/discord"
+	"docker-minecraft-to-discord/pterodactyl"
 	"errors"
 	"fmt"
 	"log"
@@ -10,15 +11,18 @@ import (
 	"strings"
 	"time"
 
-	mcrcon "github.com/Kelwing/mc-rcon"
+	"github.com/ghodss/yaml"
+	"github.com/james4k/rcon"
 )
 
 const MaxMarkersPerPlayer = 5
 
 type module struct {
-	discord   *discord.Client
-	channelID string
-	rcon      *mcrcon.MCConn
+	discord     *discord.Client
+	channelID   string
+	rcon        *rcon.RemoteConsole
+	pterodactyl *pterodactyl.Client
+	serverID    string
 }
 
 type action struct {
@@ -29,12 +33,13 @@ type action struct {
 
 var actions []action
 
-func New(discord *discord.Client, channelID string, rcon *mcrcon.MCConn) *module {
-
+func New(discord *discord.Client, channelID string, rcon *rcon.RemoteConsole, pterodactyl *pterodactyl.Client, serverID string) *module {
 	m := &module{
-		discord:   discord,
-		channelID: channelID,
-		rcon:      rcon,
+		discord:     discord,
+		channelID:   channelID,
+		rcon:        rcon,
+		pterodactyl: pterodactyl,
+		serverID:    serverID,
 	}
 
 	actions = []action{
@@ -44,7 +49,7 @@ func New(discord *discord.Client, channelID string, rcon *mcrcon.MCConn) *module
 			method: m.help,
 		},
 		{
-			prefix: "!marker-add",
+			prefix: "!add",
 			help:   "<overworld|nether|end> <X Z> <name>: add a marker called <name> on given coordinates",
 			method: m.markerAdd,
 		},
@@ -54,7 +59,7 @@ func New(discord *discord.Client, channelID string, rcon *mcrcon.MCConn) *module
 			method: m.markerList,
 		},
 		{
-			prefix: "!marker-remove",
+			prefix: "!remove",
 			help:   "<name>: remove the marker.",
 			method: m.markerRemove,
 		},
@@ -139,24 +144,32 @@ func markerFromString(userID, s string) (*Marker, error) {
 }
 
 func (m *module) getMarkers(userID string) []Marker {
-	markersAsString := strings.Split(m.actualRcon("dmarker list set:Bases"), "\n")
-	log.Println(markersAsString)
+	dat, err := m.pterodactyl.ServerReadFile(m.serverID, "/plugins/dynmap/markers.yml")
+	if err != nil {
+		panic(err)
+	}
 
-	var markers []Marker
-	for _, v := range markersAsString {
-		if !strings.HasPrefix(v, userID) {
+	p := map[string]interface{}{}
+	yaml.Unmarshal(dat, &p)
+
+	var mkers []Marker
+
+	markers := p["sets"].(map[string]interface{})["Bases"].(map[string]interface{})["markers"].(map[string]interface{})
+	for i := range markers {
+		if !strings.HasPrefix(i, userID) {
 			continue
 		}
 
-		m := Marker{ID: v[:strings.Index(v, ":")]}
-		parts := strings.Split(v[strings.Index(v, ":")+2:], ", ")
-		for _, p := range parts {
-			kv := strings.Split(p, ":")
-			switch kv[0] {
+		v := markers[i].(map[string]interface{})
+		fmt.Printf("%#v", v)
+
+		m := Marker{ID: i}
+		for j := range v {
+			switch j {
 			case "label":
-				m.Name = strings.Trim(kv[1], `"`)
+				m.Name = strings.Trim(v[j].(string), `"`)
 			case "world":
-				switch kv[1] {
+				switch v[j].(string) {
 				case "world":
 					m.World = "overworld"
 				case "world_nether":
@@ -165,16 +178,15 @@ func (m *module) getMarkers(userID string) []Marker {
 					m.World = "the_end"
 				}
 			case "x":
-				x, _ := strconv.ParseFloat(kv[1], 64)
-				m.X = x
+				m.X = v[j].(float64)
 			case "z":
-				z, _ := strconv.ParseFloat(kv[1], 64)
-				m.Z = z
+				m.Z = v[j].(float64)
 			}
 		}
-		markers = append(markers, m)
+		mkers = append(mkers, m)
 	}
-	return markers
+
+	return mkers
 }
 
 func (m *module) markerList(userID, _, _ string) {
@@ -223,11 +235,15 @@ func (m *module) OnNewDiscordMessage(userid, user, msg string) {
 
 func (m *module) actualRcon(command string) string {
 	log.Println("send command", command)
-	res, err := m.rcon.SendCommand(command)
-	if err != nil {
-		log.Println("[err] SendCommand", err)
-	}
-	log.Println("got result", res)
 
+	_, err := m.rcon.Write(command)
+	if err != nil {
+		log.Println("[err] write", err)
+	}
+
+	res, _, err := m.rcon.Read()
+	if err != nil {
+		log.Println("[err] read", err)
+	}
 	return res
 }
